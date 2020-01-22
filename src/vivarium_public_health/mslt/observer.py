@@ -347,3 +347,93 @@ class TobaccoPrevalence:
         cols = ['year_of_birth'] + self.table_cols
         data = data.reindex(columns=cols)
         data.to_csv(self.output_file, index=False)
+
+class ExposurePrevalence:
+    """This class records the prevalence of an exposure in the population.
+
+    Parameters
+    ----------
+    output_suffix
+        The suffix for the CSV file in which to record the
+        prevalence data.
+
+    """
+
+    def __init__(self, exposure_name, output_suffix=None):
+        
+        self.exposure_name = exposure_name
+        if output_suffix:
+            self.output_suffix = output_suffix
+        else: 
+            self.output_suffix = exposure_name
+    
+    @property
+    def name(self):
+        return '{}_prevalence_observer'.format(self.exposure_name)
+
+    def setup(self, builder):
+        self.config = builder.configuration
+        self.clock = builder.time.clock()
+        self.bin_years = int(self.config['exposure'][self.exposure_name]['delay'])
+
+        view_columns = ['age', 'sex', 'bau_population', 'population'] + self.get_bin_names()
+        self.population_view = builder.population.get_view(view_columns)
+
+        self.tables = []
+        self.table_cols = ['age', 'sex', 'year']
+
+        builder.event.register_listener('collect_metrics',
+                                        self.on_collect_metrics)
+        builder.event.register_listener('simulation_end',
+                                        self.write_output)
+        self.output_file = output_file(builder.configuration,
+                                       self.output_suffix)
+
+    def get_bin_names(self):
+        """Return the bin names for both the BAU and the intervention scenario.
+
+        These names take the following forms:
+
+        ``"name.no"``
+            The number of people who have never been exposed.
+        ``"name.yes"``
+            The number of people currently exposed.
+        ``"name.N"``
+            The number of people N years post-exposure.
+
+        The final bin is the number of people :math:`\ge N` years
+        post-exposure.
+
+        The intervention bin names take the form ``"name_intervention.X"``.
+
+        """
+        if self.bin_years == 0:
+            delay_bins = [str(0)]
+        else:
+            delay_bins = [str(s) for s in range(self.bin_years + 2)]
+        bins = ['no', 'yes'] + delay_bins
+        bau_bins = ['{}.{}'.format(self.exposure_name, bin) for bin in bins]
+        int_bins = ['{}_intervention.{}'.format(self.exposure_name, bin) for bin in bins]
+        all_bins = bau_bins + int_bins
+        return all_bins
+
+    def on_collect_metrics(self, event):
+        pop = self.population_view.get(event.index)
+        if len(pop.index) == 0:
+            # No tracked population remains.
+            return
+
+        bau_cols = [c for c in pop.columns.values
+                    if c.startswith('{}.'.format(self.exposure_name))]
+        int_cols = [c for c in pop.columns.values
+                    if c.startswith('{}_intervention.'.format(self.exposure_name))]
+        output_cols = self.table_cols+bau_cols+int_cols
+
+        pop = pop.rename(columns={'population': 'int_population'})
+
+        pop['year'] = self.clock().year
+        self.tables.append(pop.reindex(columns=output_cols).reset_index(drop=True))
+
+    def write_output(self, event):
+        data = pd.concat(self.tables, ignore_index=True)
+        data.to_csv(self.output_file, index=False)
