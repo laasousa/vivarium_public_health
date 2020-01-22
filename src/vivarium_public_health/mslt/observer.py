@@ -376,7 +376,7 @@ class ExposurePrevalence:
         self.clock = builder.time.clock()
         self.bin_years = int(self.config['exposure'][self.exposure_name]['delay'])
 
-        view_columns = ['age', 'sex', 'bau_population', 'population'] + self.get_bin_names()
+        view_columns = ['age', 'sex', 'population'] + self.get_bin_names()
         self.population_view = builder.population.get_view(view_columns)
 
         self.tables = []
@@ -411,11 +411,9 @@ class ExposurePrevalence:
             delay_bins = [str(0)]
         else:
             delay_bins = [str(s) for s in range(self.bin_years + 2)]
-        bins = ['no', 'yes'] + delay_bins
-        bau_bins = ['{}.{}'.format(self.exposure_name, bin) for bin in bins]
-        int_bins = ['{}_intervention.{}'.format(self.exposure_name, bin) for bin in bins]
-        all_bins = bau_bins + int_bins
-        return all_bins
+        bin_suffixes = ['no', 'yes'] + delay_bins
+        bins = ['{}.{}'.format(self.exposure_name, bin) for bin in bin_suffixes]
+        return bins
 
     def on_collect_metrics(self, event):
         pop = self.population_view.get(event.index)
@@ -423,11 +421,9 @@ class ExposurePrevalence:
             # No tracked population remains.
             return
 
-        bau_cols = [c for c in pop.columns.values
+        exposure_cols = [c for c in pop.columns.values
                     if c.startswith('{}.'.format(self.exposure_name))]
-        int_cols = [c for c in pop.columns.values
-                    if c.startswith('{}_intervention.'.format(self.exposure_name))]
-        output_cols = self.table_cols+bau_cols+int_cols
+        output_cols = self.table_cols+exposure_cols
 
         pop = pop.rename(columns={'population': 'int_population'})
 
