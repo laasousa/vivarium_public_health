@@ -99,7 +99,7 @@ class Exposure:
         rem_df = pivot_load(builder,f'risk_factor.{self.name}.remission')
         # In the constant-prevalence case, assume there is no remission.
         if self.constant_prevalence:
-            rem_df['remission'] = 0.0
+            rem_df['value'] = 0.0
         rem_data = builder.lookup.build_table(rem_df, 
                                               key_columns=['sex'], 
                                               parameter_columns=['age','year'])
