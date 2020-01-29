@@ -211,3 +211,26 @@ class TobaccoEradication:
         if this_year >= self.year:
             rates[:] = 1.0
         return rates
+
+
+class ExposureFreeGeneration:
+    """Eradicate exposure uptake at some point in time."""
+    def __init__(self, exposure):
+        self.exposure = exposure
+        
+    @property
+    def name(self):
+        return '{}_free_generation'.format(self.exposure)
+
+    def setup(self, builder):
+        self.year = builder.configuration['exposure'][self.exposure][self.name].year
+        self.clock = builder.time.clock()
+        rate_name = '{}.incidence'.format(self.exposure)
+        builder.value.register_value_modifier(rate_name, self.adjust_rate)
+
+    def adjust_rate(self, index, rates):
+        this_year = self.clock().year
+        if this_year >= self.year:
+            return 0.0 * rates
+        else:
+            return rates
