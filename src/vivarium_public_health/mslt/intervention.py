@@ -234,3 +234,36 @@ class ExposureFreeGeneration:
             return 0.0 * rates
         else:
             return rates
+
+
+class ExposureEradication:
+    """Eradicate the exposure at some point in time."""
+    def __init__(self, exposure):
+        self.exposure = exposure
+        
+    @property
+    def name(self):
+        return '{}_eradication'.format(self.exposure)
+
+    def setup(self, builder):
+        self.year = builder.configuration['exposure'][self.exposure][self.name].year
+        self.clock = builder.time.clock()
+        inc_rate_name = '{}.incidence'.format(self.exposure)
+        builder.value.register_value_modifier(inc_rate_name,
+                                              self.adjust_inc_rate)
+        rem_rate_name = '{}.remission'.format(self.exposure)
+        builder.value.register_value_modifier(rem_rate_name,
+                                              self.adjust_rem_rate)
+
+    def adjust_inc_rate(self, index, rates):
+        this_year = self.clock().year
+        if this_year >= self.year:
+            return 0.0 * rates
+        else:
+            return rates
+
+    def adjust_rem_rate(self, index, rates):
+        this_year = self.clock().year
+        if this_year >= self.year:
+            rates[:] = 1.0
+        return rates
