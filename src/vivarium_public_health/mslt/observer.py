@@ -376,7 +376,7 @@ class ExposurePrevalence:
         self.clock = builder.time.clock()
         self.bin_years = int(self.config['exposure'][self.exposure_name]['delay'])
 
-        view_columns = ['age', 'sex', 'population'] + self.get_bin_names()
+        view_columns = ['age', 'sex'] + self.get_bin_names()
         self.population_view = builder.population.get_view(view_columns)
 
         self.tables = []
@@ -424,8 +424,6 @@ class ExposurePrevalence:
         exposure_cols = [c for c in pop.columns.values
                     if c.startswith('{}.'.format(self.exposure_name))]
         output_cols = self.table_cols+exposure_cols
-
-        pop = pop.rename(columns={'population': 'int_population'})
 
         pop['year'] = self.clock().year
         self.tables.append(pop.reindex(columns=output_cols).reset_index(drop=True))
