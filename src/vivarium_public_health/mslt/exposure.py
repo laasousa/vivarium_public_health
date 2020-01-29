@@ -206,6 +206,7 @@ class Exposure:
         rem_rate = self.remission(idx)
 
         cols = self.get_bin_names()
+        prefix = '{}.'.format(self.name)
 
         # Extract the RR of mortality associated with each exposure level.
         mort_rr = self.mortality_rr(idx)
@@ -239,8 +240,8 @@ class Exposure:
         # NOTE: adjust the RR *after* calculating the ACMR adjustments, but
         # *before* calculating the survival probability for each exposure
         # level.
-        penultimate_cols = cols
-        mort_rr.loc[:, penultimate_cols] = 1.0
+        penultimate_col = prefix + str(self.bin_years)
+        mort_rr.loc[:, penultimate_col] = 1.0
 
         # Calculate the mortality risk for non-smokers.
         surv_no = 1 - np.exp(- acmr_no)
