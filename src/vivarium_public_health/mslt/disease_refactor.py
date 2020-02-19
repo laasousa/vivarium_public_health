@@ -19,7 +19,6 @@ class Disease:
     - `<disease>.incidence`
     - `<disease>.remission`
     - `<disease>.mortality`
-    - `<disease>.morbidity`
 
     where `<disease>` is the name as provided to the constructor.
 
@@ -55,7 +54,6 @@ class Disease:
         self.load_incidence(builder)
         self.load_remission(builder)
         self.load_mortality(builder)
-        self.load_disability(builder)
         self.load_prevalence(builder)
 
         self.register_incidence_modifier(builder)
@@ -117,15 +115,6 @@ class Disease:
                                        parameter_columns=['age','year'])
         self.excess_mortality = builder.value.register_rate_producer(
             self.prefix + 'excess_mortality', source=f)
-
-    
-    def load_disability(self, builder):
-        yld_data = builder.data.load(self.data_prefix + 'morbidity')
-        yld_rate = builder.lookup.build_table(yld_data, 
-                                              key_columns=['sex'], 
-                                              parameter_columns=['age','year'])
-        self.disability_rate = builder.value.register_rate_producer(
-            self.prefix + 'yld_rate', source=yld_rate)
 
 
     def load_prevalence(self, builder):
