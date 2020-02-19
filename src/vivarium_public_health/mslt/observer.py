@@ -462,6 +462,76 @@ class DiseaseMortalityRisk:
         data.to_csv(self.output_file, index=False)
 
 
+class DiseaseMortalityRiskINT:
+    """
+    This class records the disease mortality risk for a single disease.
+
+    Parameters
+    ----------
+    name
+        The name of the chronic disease.
+    output_suffix
+        The suffix for the CSV file in which to record the
+        disease data.
+
+    """
+    def __init__(self, name, output_suffix=None):
+        self._name = name
+        if output_suffix is None:
+            output_suffix = name.lower()
+        self.output_suffix = output_suffix + '_mortalityTEST'
+
+    @property
+    def name(self):
+        return '{}_mortality_observer_TEST'.format(self._name)
+
+
+    def setup(self, builder):
+        self.S = '{}_S_intervention'.format(self._name)
+        self.C = '{}_C_intervention'.format(self._name)
+        self.S_prev = '{}_S_intervention_previous'.format(self._name)
+        self.C_prev = '{}_C_intervention_previous'.format(self._name)
+
+        columns = ['age', 'sex',
+                   self.S, self.S_prev,
+                   self.C, self.C_prev]
+        self.population_view = builder.population.get_view(columns)
+
+        builder.event.register_listener('collect_metrics', self.on_collect_metrics)
+        builder.event.register_listener('simulation_end', self.write_output)
+
+        self.tables = []
+        self.table_cols = ['sex', 'age', 'year',
+                           'mortality_risk']
+        self.clock = builder.time.clock()
+        self.output_file = output_file(builder.configuration,
+                                       self.output_suffix)
+
+    def on_collect_metrics(self, event):
+        pop = self.population_view.get(event.index)
+        if len(pop.index) == 0:
+            # No tracked population remains.
+            return
+
+        pop['year'] = self.clock().year
+        
+        S, S_prev = pop[self.S], pop[self.S_prev]
+        C, C_prev = pop[self.C], pop[self.C_prev]
+        D = 1000 - S - C
+        D_prev = 1000 - S_prev - C_prev
+
+        # NOTE: as per the spreadsheet, the denominator is from the same point
+        # in time as the term being subtracted in the numerator.
+
+        pop['mortality_risk'] = (D - D_prev) / (S_prev + C_prev)
+
+        self.tables.append(pop.loc[:, self.table_cols])
+
+    def write_output(self, event):
+        data = pd.concat(self.tables, ignore_index=True)
+        data.to_csv(self.output_file, index=False)
+
+
 class DiseasePrevalenceRate:
     """
     This class records the disease prevalence rate for a single disease.
@@ -491,6 +561,74 @@ class DiseasePrevalenceRate:
         self.C = '{}_C'.format(self._name)
         self.S_prev = '{}_S_previous'.format(self._name)
         self.C_prev = '{}_C_previous'.format(self._name)
+
+        columns = ['age', 'sex',
+                   self.S, self.S_prev,
+                   self.C, self.C_prev]
+        self.population_view = builder.population.get_view(columns)
+
+        builder.event.register_listener('collect_metrics', self.on_collect_metrics)
+        builder.event.register_listener('simulation_end', self.write_output)
+
+        self.tables = []
+        self.table_cols = ['sex', 'age', 'year',
+                           'prevalence_rate']
+        self.clock = builder.time.clock()
+        self.output_file = output_file(builder.configuration,
+                                       self.output_suffix)
+
+    def on_collect_metrics(self, event):
+        pop = self.population_view.get(event.index)
+        if len(pop.index) == 0:
+            # No tracked population remains.
+            return
+
+        pop['year'] = self.clock().year
+        # The prevalence rate is the mean number of diseased people over the
+        # year, divided by the mean number of alive people over the year.
+        # The 0.5 multipliers in the numerator and denominator therefore cancel
+        # each other out, and can be removed.
+        S, S_prev = pop[self.S], pop[self.S_prev]
+        C, C_prev = pop[self.C], pop[self.C_prev]
+
+        pop['prevalence_rate'] = (C + C_prev) / (S + C + S_prev + C_prev)
+
+        self.tables.append(pop.loc[:, self.table_cols])
+
+    def write_output(self, event):
+        data = pd.concat(self.tables, ignore_index=True)
+        data.to_csv(self.output_file, index=False)
+
+
+class DiseasePrevalenceRateINT:
+    """
+    This class records the disease prevalence rate for a single disease.
+
+    Parameters
+    ----------
+    name
+        The name of the chronic disease.
+    output_suffix
+        The suffix for the CSV file in which to record the
+        disease data.
+
+    """
+    def __init__(self, name, output_suffix=None):
+        self._name = name
+        if output_suffix is None:
+            output_suffix = name.lower()
+        self.output_suffix = output_suffix + '_prevalenceTEST'
+
+    @property
+    def name(self):
+        return '{}_prevalence_observer_TEST'.format(self._name)
+
+
+    def setup(self, builder):
+        self.S = '{}_S_intervention'.format(self._name)
+        self.C = '{}_C_intervention'.format(self._name)
+        self.S_prev = '{}_S_intervention_previous'.format(self._name)
+        self.C_prev = '{}_C_intervention_previous'.format(self._name)
 
         columns = ['age', 'sex',
                    self.S, self.S_prev,
