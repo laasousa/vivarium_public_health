@@ -49,14 +49,17 @@ class Disease:
         self.clock = builder.time.clock()
         self.start_year = builder.configuration.time.start.year
         self.simplified_equations = builder.configuration[self.name].simplified_no_remission_equations
-
-        self.load_pifs(builder)
+        
         self.load_incidence(builder)
         self.load_remission(builder)
         self.load_mortality(builder)
         self.load_prevalence(builder)
 
-        self.register_incidence_modifier(builder)
+        bau_scenario = 'BAU' 
+        self.scenario = builder.configuration.scenario
+        if self.scenario != bau_scenario:
+            self.load_pifs(builder)
+            self.register_incidence_modifier(builder)
 
         columns = []
         for rate in ['_S', '_C']:
@@ -75,10 +78,9 @@ class Disease:
 
     def load_pifs(self,builder):
         model = builder.configuration.model
-        scenario = builder.configuration.scenario
 
         pif_folder = 'pif_results/{}/{}/'.format(model, self.name)
-        pif_filename = '{}_pifs_{}_{}.csv'.format(model, self.name, scenario)
+        pif_filename = '{}_pifs_{}_{}.csv'.format(model, self.name, self.scenario)
 
         pif_data = pd.read_csv(pif_folder + pif_filename)
         pif_data.rename(columns = {'age': 'age_start', 'year':'year_start'}, inplace=True)
