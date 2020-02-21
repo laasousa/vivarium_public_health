@@ -431,8 +431,7 @@ class DiseaseMortalityRisk:
         builder.event.register_listener('simulation_end', self.write_output)
 
         self.tables = []
-        self.table_cols = ['sex', 'age', 'year',
-                           'mortality_risk']
+        self.table_cols = ['sex', 'age', 'year', 'value']
         self.clock = builder.time.clock()
         self.output_file = output_file(builder.configuration,
                                        self.output_suffix)
@@ -453,7 +452,7 @@ class DiseaseMortalityRisk:
         # NOTE: as per the spreadsheet, the denominator is from the same point
         # in time as the term being subtracted in the numerator.
 
-        pop['mortality_risk'] = (D - D_prev) / (S_prev + C_prev)
+        pop['value'] = (D - D_prev) / (S_prev + C_prev)
 
         self.tables.append(pop.loc[:, self.table_cols])
 
@@ -501,8 +500,7 @@ class DiseaseMortalityRiskINT:
         builder.event.register_listener('simulation_end', self.write_output)
 
         self.tables = []
-        self.table_cols = ['sex', 'age', 'year',
-                           'mortality_risk']
+        self.table_cols = ['sex', 'age', 'year', 'value']
         self.clock = builder.time.clock()
         self.output_file = output_file(builder.configuration,
                                        self.output_suffix)
@@ -523,7 +521,7 @@ class DiseaseMortalityRiskINT:
         # NOTE: as per the spreadsheet, the denominator is from the same point
         # in time as the term being subtracted in the numerator.
 
-        pop['mortality_risk'] = (D - D_prev) / (S_prev + C_prev)
+        pop['value'] = (D - D_prev) / (S_prev + C_prev)
 
         self.tables.append(pop.loc[:, self.table_cols])
 
@@ -571,8 +569,7 @@ class DiseasePrevalenceRate:
         builder.event.register_listener('simulation_end', self.write_output)
 
         self.tables = []
-        self.table_cols = ['sex', 'age', 'year',
-                           'prevalence_rate']
+        self.table_cols = ['sex', 'age', 'year', 'value']
         self.clock = builder.time.clock()
         self.output_file = output_file(builder.configuration,
                                        self.output_suffix)
@@ -591,7 +588,7 @@ class DiseasePrevalenceRate:
         S, S_prev = pop[self.S], pop[self.S_prev]
         C, C_prev = pop[self.C], pop[self.C_prev]
 
-        pop['prevalence_rate'] = (C + C_prev) / (S + C + S_prev + C_prev)
+        pop['value'] = (C + C_prev) / (S + C + S_prev + C_prev)
 
         self.tables.append(pop.loc[:, self.table_cols])
 
@@ -639,8 +636,7 @@ class DiseasePrevalenceRateINT:
         builder.event.register_listener('simulation_end', self.write_output)
 
         self.tables = []
-        self.table_cols = ['sex', 'age', 'year',
-                           'prevalence_rate']
+        self.table_cols = ['sex', 'age', 'year', 'value']
         self.clock = builder.time.clock()
         self.output_file = output_file(builder.configuration,
                                        self.output_suffix)
@@ -659,7 +655,7 @@ class DiseasePrevalenceRateINT:
         S, S_prev = pop[self.S], pop[self.S_prev]
         C, C_prev = pop[self.C], pop[self.C_prev]
 
-        pop['prevalence_rate'] = (C + C_prev) / (S + C + S_prev + C_prev)
+        pop['value'] = (C + C_prev) / (S + C + S_prev + C_prev)
 
         self.tables.append(pop.loc[:, self.table_cols])
 
