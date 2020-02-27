@@ -156,6 +156,113 @@ class MorbidityMortality:
         data.to_csv(self.output_file, index=False)
 
 
+class MorbidityMortality_refactor:
+    """
+    This class records the all-cause morbidity and mortality rates for each
+    cohort at each year of the simulation.
+
+    Parameters
+    ----------
+    output_suffix
+        The suffix for the CSV file in which to record the
+        morbidity and mortality data.
+
+    """
+
+    def __init__(self, output_suffix='mm'):
+        self.output_suffix = output_suffix
+
+    @property
+    def name(self):
+        return 'morbidity_mortality_observer'
+
+    def setup(self, builder):
+        # Record the key columns from the core multi-state life table.
+        columns = ['age', 'sex',
+                'population',
+                'acmr',
+                'pr_death',
+                'deaths',
+                'yld_rate',
+                'person_years',
+                'HALY']
+        self.population_view = builder.population.get_view(columns)
+        self.clock = builder.time.clock()
+        builder.event.register_listener('collect_metrics', self.on_collect_metrics)
+        builder.event.register_listener('simulation_end', self.write_output)
+        self.tables = []
+        self.table_cols = ['sex', 'age', 'year',
+                        'population',
+                        'prev_population',
+                        'acmr', 
+                        'pr_death',
+                        'deaths', 
+                        'yld_rate', 
+                        'person_years',
+                        'HALY']
+
+        self.output_file = output_file(builder.configuration,
+                                    self.output_suffix)
+
+    def on_collect_metrics(self, event):
+        pop = self.population_view.get(event.index)
+        if len(pop.index) == 0:
+            # No tracked population remains.
+            return
+
+        pop['year'] = self.clock().year
+        # Record the population size prior to the deaths.
+        pop['prev_population'] = pop['population'] + pop['deaths']
+        self.tables.append(pop[self.table_cols])
+
+    def calculate_LE(self, table, py_col, denom_col):
+        """Calculate the life expectancy for each cohort at each time-step.
+
+        Parameters
+        ----------
+        table
+            The population life table.
+        py_col
+            The name of the person-years column.
+        denom_col
+            The name of the population denominator column.
+
+        Returns
+        -------
+            The life expectancy for each table row, represented as a
+            pandas.Series object.
+
+        """
+        # Group the person-years by cohort.
+        group_cols = ['year_of_birth', 'sex']
+        subset_cols = group_cols + [py_col]
+        grouped = table.loc[:, subset_cols].groupby(by=group_cols)[py_col]
+        # Calculate the reverse-cumulative sums of the adjusted person-years
+        # (i.e., the present and future person-years) by:
+        #   (a) reversing the adjusted person-years values in each cohort;
+        #   (b) calculating the cumulative sums in each cohort; and
+        #   (c) restoring the original order.
+        cumsum = grouped.apply(lambda x: pd.Series(x[::-1].cumsum()).iloc[::-1])
+        return cumsum / table[denom_col]
+
+    def write_output(self, event):
+        data = pd.concat(self.tables, ignore_index=True)
+        data['year_of_birth'] = data['year'] - data['age']
+        # Sort the table by cohort (i.e., generation and sex), and then by
+        # calendar year, so that results are output in the same order as in
+        # the spreadsheet models.
+        data = data.sort_values(by=['year_of_birth', 'sex', 'age'], axis=0)
+        data = data.reset_index(drop=True)
+        # Re-order the table columns.
+        cols = ['year_of_birth'] + self.table_cols
+        data = data[cols]
+        # Calculate life expectancy and HALE for the BAU and intervention,
+        # with respect to the initial population, not the survivors.
+        data['LE'] = self.calculate_LE(data, 'person_years', 'prev_population')
+        data['HALE'] = self.calculate_LE(data, 'HALY', 'prev_population')
+        data.to_csv(self.output_file, index=False, float_format='%.10f')
+
+
 class Disease:
     """
     This class records the disease incidence rate and disease prevalence for
